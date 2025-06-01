@@ -1,0 +1,36 @@
+{
+  "name": "companion-module-norxe-unify",
+  "version": "1.0.0",
+  "api_version": "1.0.0",
+  "keywords": [
+    "norxe",
+    "unify",
+    "projector",
+    "lighting",
+    "control",
+    "P10",
+    "P20",
+    "P55",
+    "P60"
+  ],
+  "manufacturer": "Norxe AS",
+  "product": "Unify Platform Projectors",
+  "shortname": "norxe-unify",
+  "description": "Deep Controls for the Norxe Unify Platform Projectors - RGB Power and Gain Control",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Bill Gillette <bill@norxe.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/billgillette/companion-module-norxe-unify.git"
+  },
+  "bugs": {
+    "url": "https://github.com/billgillette/companion-module-norxe-unify/issues"
+  },
+  "dependencies": {
+    "@companion-module/base": "~1.5.0"
+  }
+}

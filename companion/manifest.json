@@ -1,0 +1,26 @@
+{
+  "id": "norxe-unify",
+  "name": "Norxe Unify",
+  "shortname": "norxe-unify",
+  "description": "Deep Controls for the Norxe Unify Projectors",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": "git+https://github.com/billgillette/companion-module-norxe-unify.git",
+  "bugs": "https://github.com/billgillette/companion-module-norxe-unify/issues",
+  "maintainers": [
+    {
+      "name": "Bill Gillette",
+      "email": "bill@norxe.com"
+    }
+  ],
+  "legacyIds": ["hello-world"],
+  "runtime": {
+    "type": "node18",
+    "api": "nodejs-ipc",
+    "apiVersion": "0.0.0",
+    "entrypoint": "../index.js"
+  },
+  "manufacturer": "Norxe AS",
+  "products": ["Unify Platform Projectors"],
+  "keywords": ["P10", "P20", "P55", "P60"]
+}
