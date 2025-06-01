@@ -1067,17 +1067,11 @@ class NorxeUnifyInstance extends InstanceBase {
 			}
 
 			initActions() {
-				const actions = {}
-
-				// RGB POWER ACTIONS - ALL THREE ACTIONS
-				actions['rgb_power_set'] = {
-					name: 'RGB Power - Set Level',
-					options: [{ type: 'number', label: 'Power Level (0-100)', id: 'power_level', default: 50, min: 0, max: 100 }],
-					callback: async (event) => {
-						const powerLevel = parseInt(event.options.power_level)
-						this.updateRGBPowerLevel(powerLevel)
+				const { getActions } = require('./src/actions')
+				const actions = getActions(this)
+				this.setActionDefinitions(actions)
+			}
 					}
-				}
 
 				actions['rgb_power_increment'] = {
 					name: 'RGB Power - Increment (+)',
