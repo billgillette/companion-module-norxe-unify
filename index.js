@@ -1,6 +1,7 @@
 // Version 1.9.1 - Complete RGB + Gain Control Module - SECTION 1 test
 const { InstanceBase, Regex, runEntrypoint, InstanceStatus } = require('@companion-module/base')
 const net = require('net')
+const packageInfo = require('./package.json')
 
 class NorxeUnifyInstance extends InstanceBase {
 	constructor(internal) {
@@ -27,6 +28,7 @@ class NorxeUnifyInstance extends InstanceBase {
 		// irLedEnabled removed - now using nvgEnabled for API compatibility
 		this.nvgEnabled = false
 		this.projectorSerialNumber = 'Unknown'
+		this.projectorFirmwareVersion = 'Unknown'
 
 		// Measured gains - restored functionality
 		this.measuredWhiteGain = 0.0000
@@ -1162,6 +1164,11 @@ class NorxeUnifyInstance extends InstanceBase {
 						this.debugLog('info', `Device serial number queried: ${serialNumber}`)
 						this.updateSerialNumber(serialNumber)
 					}
+					else if (message.id.startsWith('query_firmware_version_')) {
+						const firmwareVersion = String(message.result)
+						this.debugLog('info', `Device firmware version queried: ${firmwareVersion}`)
+						this.updateFirmwareVersion(firmwareVersion)
+					}
 					else if (message.id.startsWith('query_nvg_')) {
 						const nvgEnabled = Boolean(message.result)
 						this.debugLog('info', `Device NVG status queried: ${nvgEnabled}`)
@@ -1490,6 +1497,7 @@ class NorxeUnifyInstance extends InstanceBase {
 		this.sendJSONRPCMessage('lightsource.brightness.closcale.get', undefined, `query_clo_dim_${this.messageId++}`)
 		this.sendJSONRPCMessage('lightsource.infrared.enable.get', undefined, `query_nvg_enable_${this.messageId++}`)
 		this.sendJSONRPCMessage('id.serial.get', undefined, `query_serial_${this.messageId++}`)
+		this.sendJSONRPCMessage('version.version.get', undefined, `query_firmware_version_${this.messageId++}`)
 		// NVG is controlled through infrared settings - no separate NVG API
 		}
 
@@ -1701,6 +1709,13 @@ class NorxeUnifyInstance extends InstanceBase {
 			this.projectorSerialNumber = serialNumber
 			this.debugLog('info', `Projector serial number: ${serialNumber}`)
 			this.setVariableValues({ projector_serial_number: serialNumber })
+			this.checkFeedbacks()
+		}
+
+		updateFirmwareVersion(firmwareVersion) {
+			this.projectorFirmwareVersion = firmwareVersion
+			this.debugLog('info', `Projector firmware version: ${firmwareVersion}`)
+			this.setVariableValues({ projector_firmware_version: firmwareVersion })
 			this.checkFeedbacks()
 		}
 
@@ -2628,7 +2643,10 @@ class NorxeUnifyInstance extends InstanceBase {
 
 				{ name: 'NVG Status', variableId: 'nvg_status' },
 				{ name: 'Projector Serial Number', variableId: 'projector_serial_number' },
-				{ name: 'Cooling Timer Display', variableId: 'cooling_timer_display' }
+				{ name: 'Projector Firmware Version', variableId: 'projector_firmware_version' },
+				{ name: 'Cooling Timer Display', variableId: 'cooling_timer_display' },
+				// Module information
+				{ name: 'Module Version', variableId: 'module_version' }
 			]
 
 			this.setVariableDefinitions(variables)
@@ -2659,7 +2677,10 @@ class NorxeUnifyInstance extends InstanceBase {
 
 				nvg_status: this.nvgEnabled ? 'Enabled' : 'Disabled',
 				projector_serial_number: this.projectorSerialNumber,
-				cooling_timer_display: this.getCoolingTimerDisplay()
+				projector_firmware_version: this.projectorFirmwareVersion,
+				cooling_timer_display: this.getCoolingTimerDisplay(),
+				// Module information
+				module_version: packageInfo.version
 			})
 		}
 

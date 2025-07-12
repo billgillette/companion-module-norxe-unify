@@ -121,6 +121,8 @@ Create an information button with:
 
 ### **Information Variables**
 - `$(projector_serial_number)` - Projector serial number
+- `$(projector_firmware_version)` - Projector firmware version
+- `$(module_version)` - Module version number
 
 ## **Available Feedback**
 
@@ -170,6 +172,7 @@ See `EXAMPLE_BUTTONS.md` for detailed button configuration examples.
 
 ### **JSON-RPC Methods Used**
 - `id.serial.get` - Get projector serial number
+- `version.version.get` - Get projector firmware version
 - `state.on` / `state.off` - Power control
 - `state.state.get` - Get power status
 - `lightsource.brightness.level.set/get` - RGB power control
