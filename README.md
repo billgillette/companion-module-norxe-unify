@@ -122,6 +122,7 @@ Create an information button with:
 ### **Information Variables**
 - `$(projector_serial_number)` - Projector serial number
 - `$(projector_firmware_version)` - Projector firmware version
+- `$(total_lamp_on_time_hours)` - Total lamp on time in hours (rounded)
 - `$(module_version)` - Module version number
 
 ## **Available Feedback**
@@ -173,6 +174,7 @@ See `EXAMPLE_BUTTONS.md` for detailed button configuration examples.
 ### **JSON-RPC Methods Used**
 - `id.serial.get` - Get projector serial number
 - `version.version.get` - Get projector firmware version
+- `statistics.totalontime.count.get` - Get total lamp on time in seconds
 - `state.on` / `state.off` - Power control
 - `state.state.get` - Get power status
 - `lightsource.brightness.level.set/get` - RGB power control

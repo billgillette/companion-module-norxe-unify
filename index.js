@@ -29,6 +29,7 @@ class NorxeUnifyInstance extends InstanceBase {
 		this.nvgEnabled = false
 		this.projectorSerialNumber = 'Unknown'
 		this.projectorFirmwareVersion = 'Unknown'
+		this.totalLampOnTimeHours = 0
 
 		// Measured gains - restored functionality
 		this.measuredWhiteGain = 0.0000
@@ -1174,6 +1175,13 @@ class NorxeUnifyInstance extends InstanceBase {
 						this.debugLog('info', `Device NVG status queried: ${nvgEnabled}`)
 						this.updateNVGStatus(nvgEnabled)
 					}
+					else if (message.id.startsWith('query_lamp_on_time_')) {
+						const lampOnTimeSeconds = parseInt(message.result)
+						if (!isNaN(lampOnTimeSeconds)) {
+							this.debugLog('info', `Device lamp on time queried: ${lampOnTimeSeconds} seconds`)
+							this.updateLampOnTime(lampOnTimeSeconds)
+						}
+					}
 					}
 				}
 				else if (message.method) {
@@ -1498,6 +1506,7 @@ class NorxeUnifyInstance extends InstanceBase {
 		this.sendJSONRPCMessage('lightsource.infrared.enable.get', undefined, `query_nvg_enable_${this.messageId++}`)
 		this.sendJSONRPCMessage('id.serial.get', undefined, `query_serial_${this.messageId++}`)
 		this.sendJSONRPCMessage('version.version.get', undefined, `query_firmware_version_${this.messageId++}`)
+		this.sendJSONRPCMessage('statistics.totalontime.count.get', undefined, `query_lamp_on_time_${this.messageId++}`)
 		// NVG is controlled through infrared settings - no separate NVG API
 		}
 
@@ -1716,6 +1725,14 @@ class NorxeUnifyInstance extends InstanceBase {
 			this.projectorFirmwareVersion = firmwareVersion
 			this.debugLog('info', `Projector firmware version: ${firmwareVersion}`)
 			this.setVariableValues({ projector_firmware_version: firmwareVersion })
+			this.checkFeedbacks()
+		}
+
+		updateLampOnTime(lampOnTimeSeconds) {
+			// Convert seconds to hours and round to whole number
+			this.totalLampOnTimeHours = Math.round(lampOnTimeSeconds / 3600)
+			this.debugLog('info', `Total lamp on time: ${lampOnTimeSeconds} seconds (${this.totalLampOnTimeHours} hours)`)
+			this.setVariableValues({ total_lamp_on_time_hours: this.totalLampOnTimeHours })
 			this.checkFeedbacks()
 		}
 
@@ -2644,6 +2661,7 @@ class NorxeUnifyInstance extends InstanceBase {
 				{ name: 'NVG Status', variableId: 'nvg_status' },
 				{ name: 'Projector Serial Number', variableId: 'projector_serial_number' },
 				{ name: 'Projector Firmware Version', variableId: 'projector_firmware_version' },
+				{ name: 'Total Lamp On Time (Hours)', variableId: 'total_lamp_on_time_hours' },
 				{ name: 'Cooling Timer Display', variableId: 'cooling_timer_display' },
 				// Module information
 				{ name: 'Module Version', variableId: 'module_version' }
@@ -2678,6 +2696,7 @@ class NorxeUnifyInstance extends InstanceBase {
 				nvg_status: this.nvgEnabled ? 'Enabled' : 'Disabled',
 				projector_serial_number: this.projectorSerialNumber,
 				projector_firmware_version: this.projectorFirmwareVersion,
+				total_lamp_on_time_hours: this.totalLampOnTimeHours,
 				cooling_timer_display: this.getCoolingTimerDisplay(),
 				// Module information
 				module_version: packageInfo.version
