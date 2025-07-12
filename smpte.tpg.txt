@@ -1,0 +1,24 @@
+{"cmd": "init", "resolution": [4096, 2176], "background": [0,0,0], "foreground": [255,255,255]}
+{"cmd": "rect", "params": [[ 0, 0], [585, 1450]], "color": [192,192,192], "thickness": -1}
+{"cmd": "rect", "params": [[ 585, 0], [1170, 1450]], "color": [192,192, 0], "thickness": -1}
+{"cmd": "rect", "params": [[1170, 0], [1755, 1450]], "color": [ 0,192,192], "thickness": -1}
+{"cmd": "rect", "params": [[1755, 0], [2340, 1450]], "color": [ 0,192, 0], "thickness": -1}
+{"cmd": "rect", "params": [[2340, 0], [2925, 1450]], "color": [192, 0,192], "thickness": -1}
+{"cmd": "rect", "params": [[2925, 0], [3510, 1450]], "color": [192, 0, 0], "thickness": -1}
+{"cmd": "rect", "params": [[3510, 0], [4095, 1450]], "color": [ 0, 0,192], "thickness": -1}
+{"cmd": "rect", "params": [[ 0,1450], [585, 1627]], "color": [ 0, 0,192], "thickness": -1}
+{"cmd": "rect", "params": [[ 585,1450], [1170, 1627]], "color": [ 19, 19, 19], "thickness": -1}
+{"cmd": "rect", "params": [[1170,1450], [1755, 1627]], "color": [192, 0,192], "thickness": -1}
+{"cmd": "rect", "params": [[1755,1450], [2340, 1627]], "color": [ 19, 19, 19], "thickness": -1}
+{"cmd": "rect", "params": [[2340,1450], [2925, 1627]], "color": [ 0,192,192], "thickness": -1}
+{"cmd": "rect", "params": [[2925,1450], [3510, 1627]], "color": [ 19, 19, 19], "thickness": -1}
+{"cmd": "rect", "params": [[3510,1450], [4095, 1627]], "color": [192,192,192], "thickness": -1}
+{"cmd": "rect", "params": [[ 0,1627], [732, 2175]], "color": [0, 33, 76], "thickness": -1}
+{"cmd": "rect", "params": [[ 732,1627], [1463, 2175]], "color": [255,255,255], "thickness": -1}
+{"cmd": "rect", "params": [[1463,1627], [2195, 2175]], "color": [ 50, 0,106], "thickness": -1}
+{"cmd": "rect", "params": [[2195,1627], [2926, 2175]], "color": [ 19, 19, 19], "thickness": -1}
+{"cmd": "rect", "params": [[2926,1627], [3121, 2175]], "color": [ 9, 9, 9], "thickness": -1}
+{"cmd": "rect", "params": [[3121,1627], [3316, 2175]], "color": [ 19, 19, 19], "thickness": -1}
+{"cmd": "rect", "params": [[3316,1627], [3511, 2175]], "color": [ 29, 29, 29], "thickness": -1}
+{"cmd": "rect", "params": [[3511,1627], [4095, 2175]], "color": [ 19, 19, 19], "thickness": -1}
+{"cmd": "show"}

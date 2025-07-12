@@ -1,0 +1,19 @@
+Color Space Calculations - 2025-06-08T08:20:17.933Z
+==========================================
+
+Rec.709 Color Gamut Calculations:
+Input RGB:
+  Red:   x = 0.6400 y = 0.3300
+  Green: x = 0.3000 y = 0.6000
+  Blue:  x = 0.1500 y = 0.0600
+
+Standard Rec.709 CMY:
+  Cyan:    x = 0.2250 y = 0.3290
+  Magenta: x = 0.3210 y = 0.1540
+  Yellow:  x = 0.4190 y = 0.5050
+
+White Point:
+  D65: x = 0.3127 y = 0.3290
+
+==========================================
+Calculation complete. Results saved to color_calculations.txt

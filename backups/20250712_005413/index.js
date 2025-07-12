@@ -27,18 +27,6 @@ class NorxeUnifyInstance extends InstanceBase {
 		// irLedEnabled removed - now using nvgEnabled for API compatibility
 		this.nvgEnabled = false
 		this.projectorSerialNumber = 'Unknown'
-
-		// Measured gains - restored functionality
-		this.measuredWhiteGain = 0.0000
-		this.measuredRedGain = 0.0000
-		this.measuredGreenGain = 0.0000
-		this.measuredBlueGain = 0.0000
-
-		// Measured gain pending values for debouncing
-		this.pendingMeasuredWhiteGain = null
-		this.pendingMeasuredRedGain = null
-		this.pendingMeasuredGreenGain = null
-		this.pendingMeasuredBlueGain = null
 		
 		this.debounceTimer = null
 		this.pendingPowerLevel = null
@@ -517,112 +505,6 @@ class NorxeUnifyInstance extends InstanceBase {
 			this.pendingYellowGain = null
 		}, this.debounceDelay)
 	}
-
-	// MEASURED GAIN DEBOUNCED UPDATE METHODS
-	updateMeasuredWhiteGainDebounced(newGain) {
-		const boundedGain = Math.max(0.0000, Math.min(1.0000, newGain))
-		this.pendingMeasuredWhiteGain = boundedGain
-		
-		if (this.debounceDelay === 0) {
-			this.updateMeasuredWhiteGain(boundedGain)
-			return
-		}
-		
-		if (this.measuredWhiteGainTimer) {
-			clearTimeout(this.measuredWhiteGainTimer)
-		}
-		
-		this.measuredWhiteGain = boundedGain
-		this.setVariableValues({ measured_white_gain: this.measuredWhiteGain.toFixed(4) })
-		this.checkFeedbacks()
-		
-		this.measuredWhiteGainTimer = setTimeout(() => {
-			this.updateMeasuredWhiteGain(this.pendingMeasuredWhiteGain)
-			this.measuredWhiteGainTimer = null
-			this.pendingMeasuredWhiteGain = null
-		}, this.debounceDelay)
-	}
-
-	updateMeasuredRedGainDebounced(newGain) {
-		const boundedGain = Math.max(0.0000, Math.min(1.0000, newGain))
-		this.pendingMeasuredRedGain = boundedGain
-		
-		if (this.debounceDelay === 0) {
-			this.updateMeasuredRedGain(boundedGain)
-			return
-		}
-		
-		if (this.measuredRedGainTimer) {
-			clearTimeout(this.measuredRedGainTimer)
-		}
-		
-		this.measuredRedGain = boundedGain
-		this.setVariableValues({ 
-			measured_red_gain: this.measuredRedGain.toFixed(4),
-			measured_rgb_sum: (this.measuredRedGain + this.measuredGreenGain + this.measuredBlueGain).toFixed(4)
-		})
-		this.checkFeedbacks()
-		
-		this.measuredRedGainTimer = setTimeout(() => {
-			this.updateMeasuredRedGain(this.pendingMeasuredRedGain)
-			this.measuredRedGainTimer = null
-			this.pendingMeasuredRedGain = null
-		}, this.debounceDelay)
-	}
-
-	updateMeasuredGreenGainDebounced(newGain) {
-		const boundedGain = Math.max(0.0000, Math.min(1.0000, newGain))
-		this.pendingMeasuredGreenGain = boundedGain
-		
-		if (this.debounceDelay === 0) {
-			this.updateMeasuredGreenGain(boundedGain)
-			return
-		}
-		
-		if (this.measuredGreenGainTimer) {
-			clearTimeout(this.measuredGreenGainTimer)
-		}
-		
-		this.measuredGreenGain = boundedGain
-		this.setVariableValues({ 
-			measured_green_gain: this.measuredGreenGain.toFixed(4),
-			measured_rgb_sum: (this.measuredRedGain + this.measuredGreenGain + this.measuredBlueGain).toFixed(4)
-		})
-		this.checkFeedbacks()
-		
-		this.measuredGreenGainTimer = setTimeout(() => {
-			this.updateMeasuredGreenGain(this.pendingMeasuredGreenGain)
-			this.measuredGreenGainTimer = null
-			this.pendingMeasuredGreenGain = null
-		}, this.debounceDelay)
-	}
-
-	updateMeasuredBlueGainDebounced(newGain) {
-		const boundedGain = Math.max(0.0000, Math.min(1.0000, newGain))
-		this.pendingMeasuredBlueGain = boundedGain
-		
-		if (this.debounceDelay === 0) {
-			this.updateMeasuredBlueGain(boundedGain)
-			return
-		}
-		
-		if (this.measuredBlueGainTimer) {
-			clearTimeout(this.measuredBlueGainTimer)
-		}
-		
-		this.measuredBlueGain = boundedGain
-		this.setVariableValues({ 
-			measured_blue_gain: this.measuredBlueGain.toFixed(4),
-			measured_rgb_sum: (this.measuredRedGain + this.measuredGreenGain + this.measuredBlueGain).toFixed(4)
-		})
-		this.checkFeedbacks()
-		
-		this.measuredBlueGainTimer = setTimeout(() => {
-			this.updateMeasuredBlueGain(this.pendingMeasuredBlueGain)
-			this.measuredBlueGainTimer = null
-			this.pendingMeasuredBlueGain = null
-		}, this.debounceDelay)
-	}
 	applyPowerLevelChange(newLevel) {
 			this.rgbPowerLevel = newLevel
 			this.debugLog('info', `RGB Power applied: ${this.rgbPowerLevel}`)
@@ -876,56 +758,6 @@ class NorxeUnifyInstance extends InstanceBase {
 			this.checkFeedbacks()
 		}
 
-		// MEASURED GAIN UPDATE METHODS - Restored functionality
-		updateMeasuredWhiteGain(newGain) {
-			this.measuredWhiteGain = Math.max(0.0000, Math.min(1.0000, newGain))
-			this.debugLog('info', `Measured White Gain updated: ${this.measuredWhiteGain.toFixed(4)}`)
-			this.setVariableValues({ measured_white_gain: this.measuredWhiteGain.toFixed(4) })
-			if (this.isConnected) {
-				this.sendMeasuredWhiteGainCommand(this.measuredWhiteGain)
-			}
-			this.checkFeedbacks()
-		}
-
-		updateMeasuredRedGain(newGain) {
-			this.measuredRedGain = Math.max(0.0000, Math.min(1.0000, newGain))
-			this.debugLog('info', `Measured Red Gain updated: ${this.measuredRedGain.toFixed(4)}`)
-			this.setVariableValues({ 
-				measured_red_gain: this.measuredRedGain.toFixed(4),
-				measured_rgb_sum: (this.measuredRedGain + this.measuredGreenGain + this.measuredBlueGain).toFixed(4)
-			})
-			if (this.isConnected) {
-				this.sendMeasuredRedGainCommand(this.measuredRedGain)
-			}
-			this.checkFeedbacks()
-		}
-
-		updateMeasuredGreenGain(newGain) {
-			this.measuredGreenGain = Math.max(0.0000, Math.min(1.0000, newGain))
-			this.debugLog('info', `Measured Green Gain updated: ${this.measuredGreenGain.toFixed(4)}`)
-			this.setVariableValues({ 
-				measured_green_gain: this.measuredGreenGain.toFixed(4),
-				measured_rgb_sum: (this.measuredRedGain + this.measuredGreenGain + this.measuredBlueGain).toFixed(4)
-			})
-			if (this.isConnected) {
-				this.sendMeasuredGreenGainCommand(this.measuredGreenGain)
-			}
-			this.checkFeedbacks()
-		}
-
-		updateMeasuredBlueGain(newGain) {
-			this.measuredBlueGain = Math.max(0.0000, Math.min(1.0000, newGain))
-			this.debugLog('info', `Measured Blue Gain updated: ${this.measuredBlueGain.toFixed(4)}`)
-			this.setVariableValues({ 
-				measured_blue_gain: this.measuredBlueGain.toFixed(4),
-				measured_rgb_sum: (this.measuredRedGain + this.measuredGreenGain + this.measuredBlueGain).toFixed(4)
-			})
-			if (this.isConnected) {
-				this.sendMeasuredBlueGainCommand(this.measuredBlueGain)
-			}
-			this.checkFeedbacks()
-		}
-
 		initTCPConnection() {
 			const host = this.config.host || '192.168.4.188'
 			const port = parseInt(this.config.port) || 49374
@@ -1084,35 +916,6 @@ class NorxeUnifyInstance extends InstanceBase {
 							this.updateLocalYellowGainFromDevice(currentGain)
 						}
 					}
-					// Measured gain query responses - restored functionality
-					else if (message.id.startsWith('query_measured_whitegain_')) {
-						const currentGain = parseFloat(message.result)
-						if (!isNaN(currentGain)) {
-							this.debugLog('info', `Device measured white gain queried: ${currentGain.toFixed(4)}`)
-							this.updateLocalMeasuredWhiteGainFromDevice(currentGain)
-						}
-					}
-					else if (message.id.startsWith('query_measured_redgain_')) {
-						const currentGain = parseFloat(message.result)
-						if (!isNaN(currentGain)) {
-							this.debugLog('info', `Device measured red gain queried: ${currentGain.toFixed(4)}`)
-							this.updateLocalMeasuredRedGainFromDevice(currentGain)
-						}
-					}
-					else if (message.id.startsWith('query_measured_greengain_')) {
-						const currentGain = parseFloat(message.result)
-						if (!isNaN(currentGain)) {
-							this.debugLog('info', `Device measured green gain queried: ${currentGain.toFixed(4)}`)
-							this.updateLocalMeasuredGreenGainFromDevice(currentGain)
-						}
-					}
-					else if (message.id.startsWith('query_measured_bluegain_')) {
-						const currentGain = parseFloat(message.result)
-						if (!isNaN(currentGain)) {
-							this.debugLog('info', `Device measured blue gain queried: ${currentGain.toFixed(4)}`)
-							this.updateLocalMeasuredBlueGainFromDevice(currentGain)
-						}
-					}
 					// Enhanced status query responses - using correct API method names
 					else if (message.id.startsWith('query_power_state_')) {
 						const powerState = parseInt(message.result)
@@ -1235,35 +1038,6 @@ class NorxeUnifyInstance extends InstanceBase {
 							this.updateLocalYellowGainFromDevice(newGain)
 						}
 					}
-					// Measured gain notifications - restored functionality
-					else if (message.method === 'image.p7.measuredwhitegain') {
-						const newGain = parseFloat(message.params)
-						if (!isNaN(newGain) && Math.abs(newGain - this.measuredWhiteGain) > 0.0001) {
-							this.debugLog('info', `External measured white gain change: ${newGain.toFixed(4)}`)
-							this.updateLocalMeasuredWhiteGainFromDevice(newGain)
-						}
-					}
-					else if (message.method === 'image.p7.measuredredgain') {
-						const newGain = parseFloat(message.params)
-						if (!isNaN(newGain) && Math.abs(newGain - this.measuredRedGain) > 0.0001) {
-							this.debugLog('info', `External measured red gain change: ${newGain.toFixed(4)}`)
-							this.updateLocalMeasuredRedGainFromDevice(newGain)
-						}
-					}
-					else if (message.method === 'image.p7.measuredgreengain') {
-						const newGain = parseFloat(message.params)
-						if (!isNaN(newGain) && Math.abs(newGain - this.measuredGreenGain) > 0.0001) {
-							this.debugLog('info', `External measured green gain change: ${newGain.toFixed(4)}`)
-							this.updateLocalMeasuredGreenGainFromDevice(newGain)
-						}
-					}
-					else if (message.method === 'image.p7.measuredbluegain') {
-						const newGain = parseFloat(message.params)
-						if (!isNaN(newGain) && Math.abs(newGain - this.measuredBlueGain) > 0.0001) {
-							this.debugLog('info', `External measured blue gain change: ${newGain.toFixed(4)}`)
-							this.updateLocalMeasuredBlueGainFromDevice(newGain)
-						}
-					}
 					// Enhanced status notifications - using CORRECT API method names from official documentation
 					else if (message.method === 'state.state') {
 						const powerState = parseInt(message.params)
@@ -1371,15 +1145,9 @@ class NorxeUnifyInstance extends InstanceBase {
 			this.sendJSONRPCMessage('image.p7.desiredbluegain.connect', undefined, `connect_bluegain_${this.messageId++}`)
 			this.sendJSONRPCMessage('image.p7.desiredcyangain.connect', undefined, `connect_cyangain_${this.messageId++}`)
 			this.sendJSONRPCMessage('image.p7.desiredmagentagain.connect', undefined, `connect_magentagain_${this.messageId++}`)
-					this.sendJSONRPCMessage('image.p7.desiredyellowgain.connect', undefined, `connect_yellowgain_${this.messageId++}`)
+			this.sendJSONRPCMessage('image.p7.desiredyellowgain.connect', undefined, `connect_yellowgain_${this.messageId++}`)
 		
-		// Measured gain subscriptions - restored functionality
-		this.sendJSONRPCMessage('image.p7.measuredwhitegain.connect', undefined, `connect_measured_whitegain_${this.messageId++}`)
-		this.sendJSONRPCMessage('image.p7.measuredredgain.connect', undefined, `connect_measured_redgain_${this.messageId++}`)
-		this.sendJSONRPCMessage('image.p7.measuredgreengain.connect', undefined, `connect_measured_greengain_${this.messageId++}`)
-		this.sendJSONRPCMessage('image.p7.measuredbluegain.connect', undefined, `connect_measured_bluegain_${this.messageId++}`)
-		
-				// Enhanced status subscriptions - using CORRECT API method names from official documentation
+					// Enhanced status subscriptions - using CORRECT API method names from official documentation
 		this.sendJSONRPCMessage('state.state.connect', undefined, `connect_power_state_${this.messageId++}`)
 		this.sendJSONRPCMessage('state.coolingtimer.connect', undefined, `connect_cooling_timer_${this.messageId++}`)
 		this.sendJSONRPCMessage('lightsource.shutter.connect', undefined, `connect_shutter_${this.messageId++}`)
@@ -1440,27 +1208,6 @@ class NorxeUnifyInstance extends InstanceBase {
 			this.sendJSONRPCMessage('image.p7.desiredyellowgain.set', gain, `yellowGain_${this.messageId++}`)
 		}
 
-		// MEASURED GAIN SEND COMMANDS - Restored functionality
-		sendMeasuredWhiteGainCommand(gain) {
-			this.debugLog('info', `Sending measured white gain command: ${gain.toFixed(4)}`)
-			this.sendJSONRPCMessage('image.p7.measuredwhitegain.set', gain, `measuredWhiteGain_${this.messageId++}`)
-		}
-
-		sendMeasuredRedGainCommand(gain) {
-			this.debugLog('info', `Sending measured red gain command: ${gain.toFixed(4)}`)
-			this.sendJSONRPCMessage('image.p7.measuredredgain.set', gain, `measuredRedGain_${this.messageId++}`)
-		}
-
-		sendMeasuredGreenGainCommand(gain) {
-			this.debugLog('info', `Sending measured green gain command: ${gain.toFixed(4)}`)
-			this.sendJSONRPCMessage('image.p7.measuredgreengain.set', gain, `measuredGreenGain_${this.messageId++}`)
-		}
-
-		sendMeasuredBlueGainCommand(gain) {
-			this.debugLog('info', `Sending measured blue gain command: ${gain.toFixed(4)}`)
-			this.sendJSONRPCMessage('image.p7.measuredbluegain.set', gain, `measuredBlueGain_${this.messageId++}`)
-		}
-
 		queryDeviceState() {
 			this.debugLog('info', 'Querying current device state...')
 	
@@ -1473,15 +1220,9 @@ class NorxeUnifyInstance extends InstanceBase {
 			this.sendJSONRPCMessage('image.p7.desiredbluegain.get', undefined, `query_bluegain_${this.messageId++}`)
 			this.sendJSONRPCMessage('image.p7.desiredcyangain.get', undefined, `query_cyangain_${this.messageId++}`)
 			this.sendJSONRPCMessage('image.p7.desiredmagentagain.get', undefined, `query_magentagain_${this.messageId++}`)
-					this.sendJSONRPCMessage('image.p7.desiredyellowgain.get', undefined, `query_yellowgain_${this.messageId++}`)
-
-		// Measured gain queries - restored functionality
-		this.sendJSONRPCMessage('image.p7.measuredwhitegain.get', undefined, `query_measured_whitegain_${this.messageId++}`)
-		this.sendJSONRPCMessage('image.p7.measuredredgain.get', undefined, `query_measured_redgain_${this.messageId++}`)
-		this.sendJSONRPCMessage('image.p7.measuredgreengain.get', undefined, `query_measured_greengain_${this.messageId++}`)
-		this.sendJSONRPCMessage('image.p7.measuredbluegain.get', undefined, `query_measured_bluegain_${this.messageId++}`)
-	
-				// Enhanced status queries - using CORRECT API method names from official documentation
+			this.sendJSONRPCMessage('image.p7.desiredyellowgain.get', undefined, `query_yellowgain_${this.messageId++}`)
+		
+					// Enhanced status queries - using CORRECT API method names from official documentation
 		this.sendJSONRPCMessage('state.state.get', undefined, `query_power_state_${this.messageId++}`)
 		this.sendJSONRPCMessage('state.coolingtimer.get', undefined, `query_cooling_timer_${this.messageId++}`)
 		this.sendJSONRPCMessage('lightsource.shutter.get', undefined, `query_shutter_${this.messageId++}`)
@@ -1571,44 +1312,6 @@ class NorxeUnifyInstance extends InstanceBase {
 	
 			this.setVariableValues({ desired_yellow_gain: this.desiredYellowGain.toFixed(3) })
 			this.saveConfig({ ...this.config, saved_yellow_gain: this.desiredYellowGain })
-			this.checkFeedbacks()
-		}
-
-		// MEASURED GAIN UPDATE FROM DEVICE METHODS - Restored functionality
-		updateLocalMeasuredWhiteGainFromDevice(newGain) {
-			this.measuredWhiteGain = Math.max(0.0000, Math.min(1.0000, newGain))
-			this.debugLog('info', `Local measured white gain updated from device: ${this.measuredWhiteGain.toFixed(4)}`)
-			this.setVariableValues({ measured_white_gain: this.measuredWhiteGain.toFixed(4) })
-			this.checkFeedbacks()
-		}
-
-		updateLocalMeasuredRedGainFromDevice(newGain) {
-			this.measuredRedGain = Math.max(0.0000, Math.min(1.0000, newGain))
-			this.debugLog('info', `Local measured red gain updated from device: ${this.measuredRedGain.toFixed(4)}`)
-			this.setVariableValues({ 
-				measured_red_gain: this.measuredRedGain.toFixed(4),
-				measured_rgb_sum: (this.measuredRedGain + this.measuredGreenGain + this.measuredBlueGain).toFixed(4)
-			})
-			this.checkFeedbacks()
-		}
-
-		updateLocalMeasuredGreenGainFromDevice(newGain) {
-			this.measuredGreenGain = Math.max(0.0000, Math.min(1.0000, newGain))
-			this.debugLog('info', `Local measured green gain updated from device: ${this.measuredGreenGain.toFixed(4)}`)
-			this.setVariableValues({ 
-				measured_green_gain: this.measuredGreenGain.toFixed(4),
-				measured_rgb_sum: (this.measuredRedGain + this.measuredGreenGain + this.measuredBlueGain).toFixed(4)
-			})
-			this.checkFeedbacks()
-		}
-
-		updateLocalMeasuredBlueGainFromDevice(newGain) {
-			this.measuredBlueGain = Math.max(0.0000, Math.min(1.0000, newGain))
-			this.debugLog('info', `Local measured blue gain updated from device: ${this.measuredBlueGain.toFixed(4)}`)
-			this.setVariableValues({ 
-				measured_blue_gain: this.measuredBlueGain.toFixed(4),
-				measured_rgb_sum: (this.measuredRedGain + this.measuredGreenGain + this.measuredBlueGain).toFixed(4)
-			})
 			this.checkFeedbacks()
 		}
 
@@ -2074,223 +1777,6 @@ class NorxeUnifyInstance extends InstanceBase {
 				}
 			}
 
-			// MEASURED GAIN ACTIONS - ALL COLORS (WHITE, RED, GREEN, BLUE)
-			// MEASURED WHITE GAIN ACTIONS
-			actions['measured_white_gain_set'] = {
-				name: 'Measured White Gain - Set Level',
-				options: [{ 
-					type: 'number', 
-					label: 'Measured White Gain (0.0000-1.0000)', 
-					id: 'gain_level', 
-					default: 0.0000, 
-					min: 0.0000, 
-					max: 1.0000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const gainLevel = parseFloat(event.options.gain_level)
-					this.updateMeasuredWhiteGain(gainLevel)
-				}
-			}
-
-			actions['measured_white_gain_increment'] = {
-				name: 'Measured White Gain - Increment (+)',
-				options: [{ 
-					type: 'number', 
-					label: 'Increment Amount', 
-					id: 'increment', 
-					default: 0.0010, 
-					min: 0.0001, 
-					max: 0.1000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const increment = parseFloat(event.options.increment)
-					const newGain = parseFloat((this.measuredWhiteGain + increment).toFixed(4))
-					this.updateMeasuredWhiteGainDebounced(newGain)
-				}
-			}
-
-			actions['measured_white_gain_decrement'] = {
-				name: 'Measured White Gain - Decrement (-)',
-				options: [{ 
-					type: 'number', 
-					label: 'Decrement Amount', 
-					id: 'decrement', 
-					default: 0.0010, 
-					min: 0.0001, 
-					max: 0.1000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const decrement = parseFloat(event.options.decrement)
-					const newGain = parseFloat((this.measuredWhiteGain - decrement).toFixed(4))
-					this.updateMeasuredWhiteGainDebounced(newGain)
-				}
-			}
-
-			// MEASURED RED GAIN ACTIONS
-			actions['measured_red_gain_set'] = {
-				name: 'Measured Red Gain - Set Level',
-				options: [{ 
-					type: 'number', 
-					label: 'Measured Red Gain (0.0000-1.0000)', 
-					id: 'gain_level', 
-					default: 0.0000, 
-					min: 0.0000, 
-					max: 1.0000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const gainLevel = parseFloat(event.options.gain_level)
-					this.updateMeasuredRedGain(gainLevel)
-				}
-			}
-
-			actions['measured_red_gain_increment'] = {
-				name: 'Measured Red Gain - Increment (+)',
-				options: [{ 
-					type: 'number', 
-					label: 'Increment Amount', 
-					id: 'increment', 
-					default: 0.0010, 
-					min: 0.0001, 
-					max: 0.1000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const increment = parseFloat(event.options.increment)
-					const newGain = parseFloat((this.measuredRedGain + increment).toFixed(4))
-					this.updateMeasuredRedGainDebounced(newGain)
-				}
-			}
-
-			actions['measured_red_gain_decrement'] = {
-				name: 'Measured Red Gain - Decrement (-)',
-				options: [{ 
-					type: 'number', 
-					label: 'Decrement Amount', 
-					id: 'decrement', 
-					default: 0.0010, 
-					min: 0.0001, 
-					max: 0.1000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const decrement = parseFloat(event.options.decrement)
-					const newGain = parseFloat((this.measuredRedGain - decrement).toFixed(4))
-					this.updateMeasuredRedGainDebounced(newGain)
-				}
-			}
-
-			// MEASURED GREEN GAIN ACTIONS
-			actions['measured_green_gain_set'] = {
-				name: 'Measured Green Gain - Set Level',
-				options: [{ 
-					type: 'number', 
-					label: 'Measured Green Gain (0.0000-1.0000)', 
-					id: 'gain_level', 
-					default: 0.0000, 
-					min: 0.0000, 
-					max: 1.0000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const gainLevel = parseFloat(event.options.gain_level)
-					this.updateMeasuredGreenGain(gainLevel)
-				}
-			}
-
-			actions['measured_green_gain_increment'] = {
-				name: 'Measured Green Gain - Increment (+)',
-				options: [{ 
-					type: 'number', 
-					label: 'Increment Amount', 
-					id: 'increment', 
-					default: 0.0010, 
-					min: 0.0001, 
-					max: 0.1000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const increment = parseFloat(event.options.increment)
-					const newGain = parseFloat((this.measuredGreenGain + increment).toFixed(4))
-					this.updateMeasuredGreenGainDebounced(newGain)
-				}
-			}
-
-			actions['measured_green_gain_decrement'] = {
-				name: 'Measured Green Gain - Decrement (-)',
-				options: [{ 
-					type: 'number', 
-					label: 'Decrement Amount', 
-					id: 'decrement', 
-					default: 0.0010, 
-					min: 0.0001, 
-					max: 0.1000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const decrement = parseFloat(event.options.decrement)
-					const newGain = parseFloat((this.measuredGreenGain - decrement).toFixed(4))
-					this.updateMeasuredGreenGainDebounced(newGain)
-				}
-			}
-
-			// MEASURED BLUE GAIN ACTIONS
-			actions['measured_blue_gain_set'] = {
-				name: 'Measured Blue Gain - Set Level',
-				options: [{ 
-					type: 'number', 
-					label: 'Measured Blue Gain (0.0000-1.0000)', 
-					id: 'gain_level', 
-					default: 0.0000, 
-					min: 0.0000, 
-					max: 1.0000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const gainLevel = parseFloat(event.options.gain_level)
-					this.updateMeasuredBlueGain(gainLevel)
-				}
-			}
-
-			actions['measured_blue_gain_increment'] = {
-				name: 'Measured Blue Gain - Increment (+)',
-				options: [{ 
-					type: 'number', 
-					label: 'Increment Amount', 
-					id: 'increment', 
-					default: 0.0010, 
-					min: 0.0001, 
-					max: 0.1000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const increment = parseFloat(event.options.increment)
-					const newGain = parseFloat((this.measuredBlueGain + increment).toFixed(4))
-					this.updateMeasuredBlueGainDebounced(newGain)
-				}
-			}
-
-			actions['measured_blue_gain_decrement'] = {
-				name: 'Measured Blue Gain - Decrement (-)',
-				options: [{ 
-					type: 'number', 
-					label: 'Decrement Amount', 
-					id: 'decrement', 
-					default: 0.0010, 
-					min: 0.0001, 
-					max: 0.1000, 
-					step: 0.0001 
-				}],
-				callback: async (event) => {
-					const decrement = parseFloat(event.options.decrement)
-					const newGain = parseFloat((this.measuredBlueGain - decrement).toFixed(4))
-					this.updateMeasuredBlueGainDebounced(newGain)
-				}
-			}
-
 			this.setActionDefinitions(actions)
 		}
 
@@ -2612,12 +2098,6 @@ class NorxeUnifyInstance extends InstanceBase {
 				{ name: 'Desired Cyan Gain', variableId: 'desired_cyan_gain' },
 				{ name: 'Desired Magenta Gain', variableId: 'desired_magenta_gain' },
 				{ name: 'Desired Yellow Gain', variableId: 'desired_yellow_gain' },
-				// Measured gain variables - restored functionality
-				{ name: 'Measured White Gain', variableId: 'measured_white_gain' },
-				{ name: 'Measured Red Gain', variableId: 'measured_red_gain' },
-				{ name: 'Measured Green Gain', variableId: 'measured_green_gain' },
-				{ name: 'Measured Blue Gain', variableId: 'measured_blue_gain' },
-				{ name: 'Measured RGB Sum', variableId: 'measured_rgb_sum' },
 				// Enhanced status variables
 				{ name: 'Projector Power State', variableId: 'projector_power_state' },
 				{ name: 'Projector Power State (Raw)', variableId: 'projector_power_state_raw' },
@@ -2643,12 +2123,6 @@ class NorxeUnifyInstance extends InstanceBase {
 				desired_cyan_gain: this.desiredCyanGain.toFixed(3),
 				desired_magenta_gain: this.desiredMagentaGain.toFixed(3),
 				desired_yellow_gain: this.desiredYellowGain.toFixed(3),
-				// Measured gain variables - restored functionality
-				measured_white_gain: this.measuredWhiteGain.toFixed(4),
-				measured_red_gain: this.measuredRedGain.toFixed(4),
-				measured_green_gain: this.measuredGreenGain.toFixed(4),
-				measured_blue_gain: this.measuredBlueGain.toFixed(4),
-				measured_rgb_sum: (this.measuredRedGain + this.measuredGreenGain + this.measuredBlueGain).toFixed(4),
 				// Enhanced status variables
 				projector_power_state: this.projectorPowerState,
 				projector_power_state_raw: this.projectorPowerStateRaw,

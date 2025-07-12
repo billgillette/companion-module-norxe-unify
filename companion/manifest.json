@@ -13,7 +13,7 @@
       "email": "bill@norxe.com"
     }
   ],
-  "legacyIds": ["hello-world"],
+  "legacyIds": ["Norxe-Unify"],
   "runtime": {
     "type": "node18",
     "api": "nodejs-ipc",
@@ -21,6 +21,6 @@
     "entrypoint": "../index.js"
   },
   "manufacturer": "Norxe AS",
-  "products": ["Unify Platform Projectors"],
-  "keywords": ["P10", "P20", "P55", "P60"]
+  "products": ["Unify Projectors V3 FW"],
+  "keywords": ["P10", "P20", "P50", "P55", "P60", "Projector"]
 }

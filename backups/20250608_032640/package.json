@@ -17,7 +17,6 @@
   "shortname": "norxe-unify",
   "description": "Deep Controls for the Norxe Unify Platform Projectors - RGB Power and Gain Control",
   "main": "index.js",
-  "help": "HELP.MD",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

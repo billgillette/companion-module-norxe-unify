@@ -1,0 +1,39 @@
+
+Subscribe Are test patterns enabled: Boolean: true or false
+{ "jsonrpc": "2.0", "method": "testpattern.enable.connect", "id": "testpattern.enable.connect" }
+
+Disconnect:
+{ "jsonrpc": "2.0", "method": "testpattern.enable.disconnect", "id": "testpattern.enable.disconnect" }
+
+
+To ensure patterns are enabled and select the desired pattern, use two commands or track the status carefully using connect: 
+Also note the boolean is not in quotes.
+{ "jsonrpc": "2.0", "method": "testpattern.select.set", "params": "Red", "id": "testpattern.select.set" }
+{ "jsonrpc": "2.0", "method": "testpattern.enable.set", "params": true, "id": "testpattern.enable.set" }
+
+Check Status of Test Patteerns are they on? Works for internal, tpg and images.
+{"jsonrpc":"2.0","method":"testpattern.enable.get", "id":"Are test patterns on ?" }
+
+
+
+Gets the list of Internal Test Patterns (excludes custom test patterns)
+{"jsonrpc":"2.0","method":"testpattern.internal.get","params":[],"id":1}
+
+
+Log file of test patterns, seems to be concatenated:
+{"jsonrpc":"2.0","method":"testpattern.log.message.get","params":[],"id":1}
+
+Sending this will send back to last pattern used, must be enabled:
+{"jsonrpc":"2.0","method":"testpattern.enable.set","params":[true],"id":1}
+
+Check Status of Test Patteerns are they on?
+{"jsonrpc":"2.0","method":"testpattern.enable.get", "id":"Are test patterns on ?" }
+{"jsonrpc":"2.0","method":"testpattern.internal.connect","params":[],"id":1}
+
+{ "jsonrpc": "2.0", "method": "testpattern.contentchange.connect", "id": 4 }
+Doesnt seem to change, may be related to custom patterns. 
+
+
+
+
+

@@ -1,0 +1,1616 @@
+Unify JSON RPC API
+
+The Unify API use JSON RPC as the protocol and provides some basic features on top. These features include:
+
+list available properties, methods and signals
+call methods
+receive notifications
+set/get property values and subscribe to push notifications
+log in/out using access codes
+get documentation
+Method: list
+Name	list
+Parameters	type - string (optional)
+Description	List available items. If specified, type must be one of:
+["properties"|"methods"|"signals"|"all"|"full"]
+If not specified, defaults to "all"
+Example 1	← { "jsonrpc": "2.0", "method": "list", "id": 1 }
+→ { "jsonrpc": "2.0", "result": { "properties": { "network.state": "s", "network.address": "s" }, "methods": { "network.auto": ",", "network.manual": "sss," }, "signals": {} }, "id": 1 }
+Example 2	← { "jsonrpc": "2.0", "method": "list", "params": [ "full" ], "id": 1 }
+→ { "jsonrpc": "2.0", "result": { "properties": [ { "name": "network.state", "type": "s", "level": "User" }, { "name": "network.address", "type": "s", "level": "Power" } ], "methods": [ { "name": "network.auto", "type": ",", "level": "User" }, { "name": "network.manual", "type": "sss,", "level": "Power" } ], "signals": [ { "name": "servicesregistered", "type": "as", "level": "Service" } ] }, "id": 1 }
+As can be seen in the first example above, the result of the list command is a dictionary containing all the available entities and their data types. The data types also reveal the type of entity. The data types are similar to the type definition used by D-Bus. E.g "s" means a string, "as" is an array of strings, "a{sv}" is a dictionary with string keys and variant values. If the type contains a ",", it means that the entity is a method. A single "," means that it is a method that takes no parameters and returns no result. Input parameters are specified to the left of "," and return values are specified to the right of ",". E.g "sss,b" means that the method takes 3 string arguments and returns a boolean result. For properties, a ? at the end of the type means that the property access is read only, i.e the property value can not be changed directly by clients. E.g "network.hardwareaddress": "s?", means that the hardware address of the network service is a string value that can not be changed.
+
+In the second example, the "full" option was specified. The returned result is now slightly different. The properties, methods and signals are now specified as lists of values. Each value has three properties: "name", "type" and "level". The latter indicates which access level is required for a given item. Most items are at "User" level, but there are some that require raised access level.
+
+Method: login and logout
+Name	login
+Parameters	pin - string
+Return value	boolean - true if the login was successful, false otherwise
+Example	← { "jsonrpc": "2.0", "method": "login", "params": "000000", "id": 1 }
+→ { "jsonrpc": "2.0", "result": false, "id": 1 }
+Name	logout
+Parameters	
+Return value	boolean - true if the logout was successful, false otherwise
+Example	← { "jsonrpc": "2.0", "method": "logout", "id": 2 }
+→ { "jsonrpc": "2.0", "result": true, "id": 2 }
+Name	doc
+Parameters	name - string
+Return value	List of document strings
+Example	← { "jsonrpc": "2.0", "method": "doc", "params": "ui.language", "id": 0 }
+→ { "jsonrpc": "2.0", "result": [ { "d": "This is the description" }, { "p": "This is additional information" } ], "id": 0 }
+Properties
+
+Available properties are queried by the list command showed in the previous section. To use a property, append a verb as the last element in the property name. The available verbs are shown in the table below. Let's assume that we are using the property named network.address.
+
+Verb	Description	Example
+get	Get the current value of the property	network.address.get
+← { "jsonrpc": "2.0", "method": "network.address.get", "id": 2 }
+→ { "jsonrpc": "2.0", "result": "169.198.1.100", "id": 2 }
+set	Set the new value of the property	network.address.set
+← { "jsonrpc": "2.0", "method": "network.address.set", "params": "169.198.1.110", "id": 3 }
+→ { "jsonrpc": "2.0", "result": true, "id": 3 }
+connect	Request a notification every time the property value changes. The notification will be just the name of the property as the method and the parameter will contain the new value. This message does not contain an id, which means no response is required.	network.address.connect
+← { "jsonrpc": "2.0", "method": "network.address.connect", "id": 4 }
+→ { "jsonrpc": "2.0", "result": true, "id": 4 }
+→ { "jsonrpc": "2.0", "method": "network.address", "params": "169.198.1.110" }
+disconnect	Stop receiving notifications every time the property value changes.	network.address.disconnect
+← { "jsonrpc": "2.0", "method": "network.address.disconnect", "id": 5 }
+→ { "jsonrpc": "2.0", "result": true, "id": 5 }
+Methods
+
+To call a method, use its name and supply any required parameters. Available methods can be listed as shown above. Let's assume we have the following method: "network.manual" with type "sss,b".
+
+← { "jsonrpc": "2.0", "method": "network.manual", "params": [ "169.198.1.110", "255.255.254.0", "169.198.1.1" ], "id": 6 }
+
+→ { "jsonrpc": "2.0", "result": true, "id": 6 }
+
+The "params" value must be a structured value, so event if the method on the server accepts 3 string arguments, the value of "params" must be specified as an array of three strings in the same order as the server expects.
+
+Many of the methods in the API does not have a return value. But it will still return a boolean value to indicate if the call was successful.
+
+Signals
+
+Signals are neither properties or methods. They are signal emitters that responds to various events. E.g a log message might be sent to the client in case of a certain event. Available signals can be queried using the list command as shown above. As with properties, signals provide the connect and disconnect verbs in order to receive or stop receiving messages, respectively. Lets assume we have a signal named "network.log".
+
+Verb	Description	Example
+connect	Request a notification when the signal fires	network.log.connect
+← { "jsonrpc": "2.0", "method": "network.log.connect", "id": 7 }
+→ { "jsonrpc": "2.0", "result": true, "id": 7 }
+→ { "jsonrpc": "2.0", "method": "network.log", "params": { "date": "2021-24-12T12:05:00.130", "severity": "w", "message": "Carrier lost" } }
+disconnect	Stop receiving notifications	network.log.disconnect
+← { "jsonrpc": "2.0", "method": "network.log.disconnect", "id": 8 }
+→ { "jsonrpc": "2.0", "result": true, "id": 8 }
+Communication
+
+Supported protocols:
+
+TCP/IP at port number 49374
+When using this port, separate each request with a newline character.
+This means that no newlines can be present anywhere in the request, except between them
+Each of the responses from the server will also be separated with a newline.
+TCP/IP at port number 64222
+This port accepts newlines anywhere in the request and require no separator between requests
+Web socket at port number 45067
+Example using port 49374:
+
+{"jsonrpc":"2.0","method":"list", "params":"all","id":0}\n{"jsonrpc":"2.0","method":"state.state.get","id":1}
+Example using port 64222:
+
+{"jsonrpc":"2.0","method":"list", "params":"all","id":0}{"jsonrpc":"2.0","method":"state.state.get","id":1}
+Both TCP/IP ports accepts batch messages.
+
+Example using port 49374:
+
+[{"jsonrpc":"2.0","method":"list", "params":"all","id":0},{"jsonrpc":"2.0","method":"state.state.get","id":1}]\n[{"jsonrpc":"2.0","method":"id.serial.get","id":2}]
+Example using port 64222:
+
+[{"jsonrpc":"2.0","method":"list", "params":"all","id":0},{"jsonrpc":"2.0","method":"state.state.get","id":1}][{"jsonrpc":"2.0","method":"id.serial.get","id":2}]
+For web sockets, a message must contain only one JSON RPC request.
+
+API Contents
+
+Symbol	Description
+A property with read/write access
+A property with read only access
+A callable method
+A notification
+Badge	Description
+P	The minium user access level is Power user for a property/method/signal
+S	The minium user access level is Service user for a property/method/signal
+F	The minium user access level is Factory user for a property/method/signal
+No badge means the property/method/signal is available for everybody
+Type	Name
+as3d.darktime : string
+Which 3D sequence to use
+as3d.darktimes : string[]
+selectable typs of external syncs
+as3d.enable : boolean
+Enables 3D
+as3d.swapeyes : boolean
+Swap left and right eye
+as3d.syncdelay : number
+Delay value of 3D glass sync
+Value between 0-179 degrees
+
+authentication.authenticated : boolean
+Specifies whether or not a user has been successfully authenticated
+authentication.changepasscode (string, string, string) → boolean
+Set a new passcode
+Old passcode
+
+New passcode
+
+Repeat new passcode
+
+authentication.required : boolean
+When authentication is required, the user must log in using a pascode
+authentication.reset (string) → boolean
+Reset a previously defined passcode. Requires the PUK
+PUK
+
+authentication.setpasscode (string, string) → boolean
+Restrict access to web app by setting a passcode
+Passcode
+
+Repeat passcode
+
+authentication.user : string
+The user group name of the logged in user
+backup.backup (boolean) → true - if call was successful
+Create a backup with settings and data or just with settings.
+Full backup with data and settings, or just settings.
+
+backup.backups : a(ub)
+List of backups stored on projector (date, [settings and data | just settings]).
+backup.busy : boolean
+When true, service is busy creating a backup and will not honor any requests until complete.
+backup.del (number) → boolean
+Delete a previously created (local) backup
+Date backup was created
+
+backup.restore (number) → boolean
+Restore a previously created (local) backup
+Date backup was created
+
+blendmask.add (a, {, string, any, }) → true - if call was successful
+Add/update a new/existing blend mask.
+The mask contents (SVG as JSON)
+
+blendmask.del (string) → true - if call was successful
+Delete a mask by name.
+blendmask.masks : string[]
+List of available blend masks by name.
+diagnostics.firmwaremodules.statusmodules : {string, string}
+module status after last upgrade
+display.settings.dutycycle : number
+display.settings.imagefreeze : number
+display.settings.imageorientation : number
+Image orientation and projection mode
+0 → Desktop, front projection
+
+1 → Desktop, rear projection
+
+2 → Ceiling, front projection
+
+3 → Ceiling, rear projection
+
+display.settings.sequencefileversion : string
+display.settings.smear : number
+Smear reduction processing
+0 → 0%
+
+1 → 12%
+
+2 → 25%
+
+3 → 37%
+
+4 → 50%
+
+display.settings.smeardarktime : ai
+Smear reduction darktime in percent
+Default values:
+
+0 → 0%
+
+1 → 12%
+
+2 → 25%
+
+3 → 37%
+
+4 → 50%
+
+display.settings.systemstatus : string
+display.settings.tiversion : string
+display.ti.hres : number
+display.ti.name : string
+display.ti.vfreq : number
+display.ti.vres : number
+display.wbip.hres : number
+display.wbip.name : string
+display.wbip.vfreq : number
+display.wbip.vres : number
+doc (string) → [string, string][]
+Get documentation strings for the specified element
+Name
+
+downloads () → [string, string][]
+List file endpoints for downloads
+edid.custom : string[]
+List of uploaded custom EDIDs
+edid.delete (string) → true - if call was successful
+Delete a previously uploaded EDID file
+The name of the EDID file to delete
+
+edid.dp1 : string
+Selected EDID for DP1
+edid.dp1edids : string[]
+Builtin EDIDs for DP1
+edid.dp2 : string
+Selected EDID for DP2
+edid.dp2edids : string[]
+Builtin EDIDs for DP2
+edid.hdmi : string
+Selected EDID for HDMI
+edid.hdmiedids : string[]
+Builtin EDIDs for HDMI
+edid.reset () → true - if call was successful
+Full reset of the EDID service. All uploaded EDID files will be deleted
+externalsync.sync1.name : string
+External sync port
+externalsync.sync1.restore (string) → boolean
+Restore setting to user level from /pwr/srv/fac/dev
+externalsync.sync1.select : string
+Select external sync type
+externalsync.sync1.synctypes : string[]
+selectable types of external syncs
+externalsync.sync2.name : string
+External sync port
+externalsync.sync2.restore (string) → boolean
+Restore setting to user level from /pwr/srv/fac/dev
+externalsync.sync2.select : string
+Select external sync type
+externalsync.sync2.synctypes : string[]
+selectable types of external syncs
+externalsync.sync3.name : string
+External sync port
+externalsync.sync3.restore (string) → boolean
+Restore setting to user level from /pwr/srv/fac/dev
+externalsync.sync3.select : string
+Select external sync type
+externalsync.sync3.synctypes : string[]
+selectable types of external syncs
+group : string
+id.board.actuator : boolean
+Actuator installed
+id.board.description : string
+Description of main board
+id.board.lensdetect : boolean
+Lens detection available
+id.board.pcb : string
+PCB version number
+id.board.revision : string
+Main board revision number
+id.board.variant : string
+Main board variant number
+id.board.vpfpga : string
+FPGA version number
+id.description : string
+Short description of the projector
+id.details.actuatortype : number
+Actuator type
+id.details.nightvision : boolean
+Night vision installed
+id.details.productname : string
+Product name
+id.name : string
+User defined name that can be used to identify the projector on the network
+id.native.aspect : number
+Projector native aspect ratio
+id.native.hres : number
+Projector native horizontal resolution
+id.native.vres : number
+Projector native vertical resolution
+id.partnumber : string
+The part number
+id.product : string
+The product name
+Accepted values: P50 | P60 | P65
+
+id.serial : string
+The serial number of the projector
+image.config.delay : number
+Delay
+image.gamma.del (string) → boolean
+image.gamma.dual_gamma : boolean
+Enable/disable Dual Gamma
+image.gamma.dual_gamma_invert : boolean
+Invert Dual Gamma.
+image.gamma.file : string
+Select gamma table from file
+image.gamma.gamma : number
+Image gamma - set [1.0,3.0]
+image.gamma.gammargb : (ddd)
+Image gamma - set RGB [1.0,3.0]
+image.gamma.log.message : string[]
+user messages
+image.gamma.restore (string) → boolean
+Restore setting to user level from /pwr/srv/fac/dev
+image.gamma.type : string
+Type of gamma - function or file
+image.gamma.uploaded : string[]
+List of uploaded gammatables
+image.gamma1.del (string) → boolean
+image.gamma1.dual_gamma : boolean
+Enable/disable Dual Gamma
+image.gamma1.dual_gamma_invert : boolean
+Invert Dual Gamma.
+image.gamma1.file : string
+Select gamma table from file
+image.gamma1.gamma : number
+Image gamma - set [1.0,3.0]
+image.gamma1.gammargb : (ddd)
+Image gamma - set RGB [1.0,3.0]
+image.gamma1.log.message : string[]
+user messages
+image.gamma1.restore (string) → boolean
+Restore setting to user level from /pwr/srv/fac/dev
+image.gamma1.type : string
+Type of gamma - function or file
+image.gamma1.uploaded : string[]
+List of uploaded gammatables
+image.p7.cca : number
+image.p7.debug : string
+Returns json string with P7 matrixes. Full 3x7 XYZ matrix, and each 6 Indexe matrixes
+image.p7.desiredbluegain : number
+image.p7.desiredbluex : number
+image.p7.desiredbluey : number
+image.p7.desiredcyangain : number
+image.p7.desiredcyanx : number
+image.p7.desiredcyany : number
+image.p7.desiredgreengain : number
+image.p7.desiredgreenx : number
+image.p7.desiredgreeny : number
+image.p7.desiredmagentagain : number
+image.p7.desiredmagentax : number
+image.p7.desiredmagentay : number
+image.p7.desiredredgain : number
+image.p7.desiredredx : number
+image.p7.desiredredy : number
+image.p7.desiredwhitegain : number
+image.p7.desiredwhitex : number
+image.p7.desiredwhitey : number
+image.p7.desiredyellowgain : number
+image.p7.desiredyellowx : number
+image.p7.desiredyellowy : number
+image.p7.invalidinput : boolean
+image.p7.measuredbluegain : number
+image.p7.measuredbluex : number
+image.p7.measuredbluey : number
+image.p7.measuredgreengain : number
+image.p7.measuredgreenx : number
+image.p7.measuredgreeny : number
+image.p7.measuredredgain : number
+image.p7.measuredredx : number
+image.p7.measuredredy : number
+image.p7.measuredwhitegain : number
+image.p7.measuredwhitex : number
+image.p7.measuredwhitey : number
+image.p7.overflow : boolean
+image.p7.setting.control.restore (string) → boolean
+Restore setting to user level from /pwr/srv/fac/dev
+image.p7.setting.restore (string) → boolean
+Restore setting to user level from /pwr/srv/fac/dev
+image.warp.alpha : string[]
+List of uploaded individual alpha (blend) layers
+image.warp.alphablur : number
+Blur alpha layer using Gaussian blur with the specified kernel size (odd numbers).
+image.warp.alphalayers : string[]
+Alpha layers of currently selected MPCDI file
+image.warp.beta : string[]
+List of uploaded individual beta (blacklevel) layers
+image.warp.betalayers : string[]
+Beta layers of currently selected MPCDI file
+image.warp.blacklevel.enable : boolean
+Enable/disable blacklevel specified in MPCDI beta png
+image.warp.blacklevel.offsetscalergb : (iii)
+Value is multiplied with beta map per color
+image.warp.blacklevel.restore (string) → boolean
+Restore setting to user level from /pwr/srv/fac/dev
+image.warp.blendlayers : string[]
+List of available blend layers
+image.warp.busy : boolean
+True when the warp service is busy with processing
+image.warp.clipmask : boolean
+Enable or disable extra clip mask
+image.warp.defaultlayersize : ai
+Default size (WxH) for alpha and beta layers
+image.warp.defaultmeshsize : ai
+Default size (WxH) of warp mesh
+image.warp.delay : number
+Latency added by warp processing (when enabled)
+image.warp.direct : number
+The active warp from the direct uploader
+image.warp.enable : boolean
+Enable or disable warp
+image.warp.files : string[]
+FIFO of uploaded MPCDI files, with a max allowed of 5.
+image.warp.integrity : number
+Measure of warp integrity. Anything less than 100% means loss of precision.
+image.warp.layers : number
+Toggle layer visibility mask
+0 → No layers visible
+
+1 → Geometry layer
+
+2 → Alpha layer(s)
+
+3 → Geometry and alpha layer(s)
+
+4 → Beta layer
+
+5 → Geometry and beta layer
+
+6 → Alpha and beta layers
+
+7 → All layers visible (default)
+
+image.warp.logging : number
+Set the logging level for the warp service
+0 → Trace
+
+1 → Debug
+
+2 → Info
+
+3 → Warn
+
+4 → Error
+
+5 → Critical
+
+6 → Off
+
+image.warp.maxblacklevel : number
+Maximum blacklevel value in the selected MPCDI file [0.0 - 0.25]
+image.warp.mesh : string[]
+List of uploaded individual warp mesh files
+image.warp.mpcdi : string[]
+FIFO of uploaded MPCDI files - alias to 'files' property
+image.warp.mpcdifile : string
+Active MPCDI file
+image.warp.perspective : ad
+Four corner perspective warp. Start at the top left corner, go clockwise and pass in (X,Y) in normalized coordinates resulting in an array of 8 values
+image.warp.reload () → true - if call was successful
+Reload current MPCDI file
+image.warp.remove (string) → true - if call was successful
+Delete a previously uploaded MPCDI file
+The name of the MPCDI file to remove
+
+image.warp.removealpha (string) → true - if call was successful
+Delete a previously uploaded PNG alpha (blend) file
+The name of the PNG file to remove
+
+image.warp.removebeta (string) → true - if call was successful
+Delete a previously uploaded PNG beta (blacklevel) file
+The name of the PNG file to remove
+
+image.warp.removemesh (string) → true - if call was successful
+Delete a previously uploaded PFM geometry mesh file
+The name of the PFM file to remove
+
+image.warp.rendergrid (string) → string
+Name of PFM or MPCDI file to render
+
+image.warp.restore (string) → true - if call was successful
+Full reset of the warp service. All uploaded data wil be removed
+User level
+
+image.warp.saveperspective (string) → boolean
+Save current perspective warp as mesh with the given name
+Name to use for the mesh
+
+image.warp.selectalpha : string[]
+List of selected alpha layers
+image.warp.selectbeta : string
+Selected individual beta layer
+image.warp.selectedalphalayers : string[]
+Active alpha layers of the currently selected MPCDI file
+image.warp.selectedbetalayer : string
+Active beta layer of the currently selected MPCDI file
+image.warp.selectedblendindexes : ai
+Selected blend layers. List of indices from blend layers.
+image.warp.selectmesh : string
+Selected individual geometry mesh
+image.warp.selectmode : number
+Select MPCDI files or indivdual mesh, alpha and beta files, or perspective
+0 → MPCDI
+
+1 → Individual
+
+2 → Direct
+
+3 → Perspective
+
+image.warp.selectmpcdi : string
+Currently selected MPCDI file
+image.warp.smoothmask : boolean
+Experimental: enable extra smoothing of mask/warp edges
+image.warp.status : string
+Status and error message of warp processing
+image.warp.tolerance : number
+If the third channel of a PFM data is used and contains error values, any value above the tolerance will discard the coordinate value
+input.actuallatency : number
+Actual projector latency in lines
+input.asyncdualinput : boolean
+DP1 and DP2 are asynchronous.
+input.calculatedlatency : number
+Calculated projector latency in ms
+input.combinetpgandsource : boolean
+Frame sequential combination of testpattern and input source
+0: off 1: on
+
+input.composite : number
+The maximum number of input sources which can be combined
+Legal values: 1, 2, 3, 4
+
+input.desiredlatency : number
+Desired projector latency in lines
+input.dual : number
+The mode when using dual inputs. Legal values are:
+1 → columns
+
+2 → rows
+
+3 → sequential
+
+input.dualinputs : string[]
+The sources used when dual inputs are selected
+Default values:
+
+DP1
+
+DP2
+
+input.dualwarptpg : boolean
+Two warp mesh for combination of testpattern and input source
+0: off 1: on
+
+input.fourwaynshifttpg : boolean
+Show 4 way N-shift testpattern.
+input.framesequencer.async_inputs : boolean
+Inputs can be asynchronous.
+input.inputs : number
+The number of input sources to use
+Legal values: 1, 2, 3, 4
+
+input.minimumlatency : number
+Minimum projector latency in lines for the current setup
+input.nshifttpg : boolean
+Show N-shift testpattern.
+input.nvgtpg : boolean
+Show night vision testpattern.
+input.quad : number
+The mode when using quad inputs. Legal values are:
+1 → columns
+
+2 → sequential
+
+3 → sequential_columns
+
+4 → grid
+
+input.quadinputs : string[]
+The sources used when quad inputs are selected
+Default values:
+
+DP1
+
+DP2
+
+DP3
+
+DP4
+
+input.scaling_mode : number
+Scaling of non native resolutions
+0 → one2one
+
+1 → aspect
+
+2 → fillall
+
+input.setupsource () → true - if call was successful
+Used for force SetupSource
+input.single : string
+The source for single input
+Valid names are:
+
+DP1
+
+DP2
+
+DP3
+
+DP4
+
+HDMI
+
+input.singlemode : number
+The mode when using dual inputs. Legal values are:
+0 → normal
+
+1 → top_bottom
+
+2 → side_by_side
+
+input.source0.bpc : number
+Number of bits pr color
+0,6,8,10 or 12
+
+input.source0.dp_power_out : boolean
+Enable of 3v3 power out on DP connector
+input.source0.dpcd_lane_count_set : number
+T. Number of lanes enabled by the transmitter
+Contains the number of lanes that are currently enabled by the attached transmitter.Valid values fall in the range of 1-4
+
+input.source0.dpcd_link_bw_set : string
+Link bandwidth setting
+Set to 0x0A when the link is configured for 2.7 Gb/s or 0x06 when configured for 1.62Gb/s or 0x14 when link is configured for 5.4 Gb/s or 0x1E for 8.1 Gb/s
+
+input.source0.hres : number
+input.source0.is_hbr3_supported : boolean
+Is HBR3 supprted in link training capabilities, default is HBR2.
+input.source0.name : string
+input.source0.re_driver_bypass : boolean
+DP 1.2 doesn't support re-driver link training
+input.source0.support_hbr3 : boolean
+Set HBR3 in link training capabilities, default is HBR2.
+input.source0.vfreq : number
+input.source0.vres : number
+input.source1.bpc : number
+Number of bits pr color
+0,6,8,10 or 12
+
+input.source1.dp_power_out : boolean
+Enable of 3v3 power out on DP connector
+input.source1.dpcd_lane_count_set : number
+T. Number of lanes enabled by the transmitter
+Contains the number of lanes that are currently enabled by the attached transmitter.Valid values fall in the range of 1-4
+
+input.source1.dpcd_link_bw_set : string
+Link bandwidth setting
+Set to 0x0A when the link is configured for 2.7 Gb/s or 0x06 when configured for 1.62Gb/s or 0x14 when link is configured for 5.4 Gb/s or 0x1E for 8.1 Gb/s
+
+input.source1.hres : number
+input.source1.is_hbr3_supported : boolean
+Is HBR3 supprted in link training capabilities, default is HBR2.
+input.source1.name : string
+input.source1.re_driver_bypass : boolean
+DP 1.2 doesn't support re-driver link training
+input.source1.support_hbr3 : boolean
+Set HBR3 in link training capabilities, default is HBR2.
+input.source1.vfreq : number
+input.source1.vres : number
+input.source4.bpc : number
+Number of bits pr color
+0,6,8,10 or 12
+
+input.source4.dp_power_out : boolean
+Enable of 3v3 power out on DP connector
+input.source4.dpcd_lane_count_set : number
+T. Number of lanes enabled by the transmitter
+Contains the number of lanes that are currently enabled by the attached transmitter.Valid values fall in the range of 1-4
+
+input.source4.dpcd_link_bw_set : string
+Link bandwidth setting
+Set to 0x0A when the link is configured for 2.7 Gb/s or 0x06 when configured for 1.62Gb/s or 0x14 when link is configured for 5.4 Gb/s or 0x1E for 8.1 Gb/s
+
+input.source4.hres : number
+input.source4.is_hbr3_supported : boolean
+Is HBR3 supprted in link training capabilities, default is HBR2.
+input.source4.name : string
+input.source4.re_driver_bypass : boolean
+DP 1.2 doesn't support re-driver link training
+input.source4.support_hbr3 : boolean
+Set HBR3 in link training capabilities, default is HBR2.
+input.source4.vfreq : number
+input.source4.vres : number
+input.stereotpg : boolean
+Show 3D testpattern.
+input.swapoddeven : boolean
+Swaps the ODD and EVEN fames
+input.triple : number
+The mode when using quad inputs. Legal values are:
+1 → columns
+
+input.tripleinputs : string[]
+The sources used when quad inputs are selected
+Default values:
+
+DP1
+
+DP2
+
+DP3
+
+keypad.keyevent : iii
+lcd.line0utf8 : string
+UTF-8 encoded value of LCD line 1 contents. Requires special font.
+lcd.line1utf8 : string
+UTF-8 encoded value of LCD line 1 contents. Requires special font.
+lightsensor.data.blue : number
+Blue intesity with range 0-700
+lightsensor.data.green : number
+Green intesity with range 0-700
+lightsensor.data.push () → true - if call was successful
+Push property change for Red, Green, Blue
+lightsensor.data.red : number
+Red intesity with range 0-700
+lightsensor.data.stable : boolean
+Flag to indicate when the light sensor values reaches stable levels
+lightsensor.setting.restore (string) → boolean
+Restore setting to user level from /pwr/srv/fac/dev
+lightsource.brightness.actual : number
+Actual light output from the projector. Based on readings from light sensor
+lightsource.brightness.bluetarget : number
+Shows the blue target brightness in percentage of max. Result of iris position, dimlevel and CLO value
+lightsource.brightness.clo : boolean
+Enable / Disable CLO. Enabling CLO also ensures tracking of white point (WPT)
+lightsource.brightness.closcale : number
+CLO scale value
+lightsource.brightness.greentarget : number
+Shows the green target brightness in percentage of max. Result of iris position, dimlevel and CLO value
+lightsource.brightness.level : number
+Set RGB power
+0% - 100%
+
+lightsource.brightness.redtarget : number
+Shows the red target brightness in percentage of max. Result of iris position, dimlevel and CLO value
+lightsource.brightness.systemstable : boolean
+Flag to indicat that the brightness system is stable. Checks if lightsensor is stable and temperature is stable
+lightsource.brightness.undertarget : boolean
+Flag to indicate that the light output is under the target. Checks actual vs brightness level and
+lightsource.brightness.wpt : boolean
+Enable / Disable WPT
+lightsource.counter.rgb.dutycycleblue : number
+Blue on duty cycle
+0.0 - 1.0
+
+lightsource.counter.rgb.dutycyclegreen : number
+Green on duty cycle
+0.0 - 1.0
+
+lightsource.counter.rgb.dutycyclered : number
+Red on duty cycle
+0.0 - 1.0
+
+lightsource.counter.rgb.dutycyclergboff : number
+RGB off duty cycle
+0.0 - 1.0
+
+lightsource.counter.rgb.dutycyclergbon : number
+RGB on duty cycle
+0.0 - 1.0
+
+lightsource.gain.blue : number
+Set gain value for blue light source
+Value between 0-1000
+
+lightsource.gain.green : number
+Set gain value for green light source
+Value between 0-1000
+
+lightsource.gain.red : number
+Set gain value for red light source
+Value between 0-1000
+
+lightsource.infrared.enable : number
+Enable infrared lightsource
+0: off 1: on
+
+lightsource.infrared.irbluegain : number
+Gain on blue IR component.
+Value between 0-15
+
+lightsource.infrared.irclonemode : boolean
+Clone DP1 and output 120Hz with ir.
+lightsource.infrared.irframe : number
+Select which frame to insert IR light
+0: single 2: both frames
+
+lightsource.infrared.irgreengain : number
+Gain on green IR component.
+Value between 0-15
+
+lightsource.infrared.irredgain : number
+Gain on red IR component.
+Value between 0-15
+
+lightsource.infrared.mutergb : boolean
+Mute RGB lightsource when showing IR cotent, this is linked to enable, developer debug only
+lightsource.infrared.power : number
+Set infrared power level
+Value between 0-100
+
+lightsource.infrared.swaprgbir : boolean
+Swaps the RGB and IR frames, developer debug only
+lightsource.shutter : number
+Turn on/off shutter
+0: shutter off 1: shutter on
+
+lightsource.toggleshutter () → true - if call was successful
+Toggle shutter
+lightsource.version : string
+Return string with release version of SSI-FPGA
+list (string) → {string, any}
+List available properties, methods and signals
+Category
+
+login (string) → boolean
+Login using a passcode
+Passcode
+
+logout () → true - if call was successful
+Log out from the current access level
+network.address : string
+The IPv4 network address
+network.auto () → true - if call was successful
+Tell the network interface to use the automatic (DHCP) configuration
+network.carrier : boolean
+Ethernet carrier signal
+network.config : {string, string}
+The address, subnet mask and gateway of the current network configuration
+network.duplex : string
+The duplex mode: 'Full' or 'Half'
+network.enableascii : boolean
+Enable or disable the ASCII protocol on port 1025
+network.enablediscovery : boolean
+Allow other devices on the network to discover this device
+network.enablehttp : boolean
+Enable or disable HTTP:// on port 80
+network.enablejsonrpc : boolean
+Enable or disable the JSON RPC protocol on port 49374
+network.enablessh (boolean, boolean, string) → boolean
+Enable or disable SSH access to the projector. Requres PIN code to change
+enable
+
+persist
+
+pin
+
+network.enablewarpdirect : boolean
+Allow direct upload of PFM and BIN files to the Warp service
+network.enablews : boolean
+network.ethstatus : a(bss)
+network.hardwareaddress : string
+The hardware (MAC) address of the network interface
+network.hostname : string
+The host name of the projector
+network.manual () → true - if call was successful
+Tell the network interface to use the manual configuration
+network.manualconfig : {string, string}
+Specifies the manual/static configuration of the network
+Address → The IPv4 network address
+
+Netmask → The subnet mask
+
+Gateway → The gateway address
+
+network.method : string
+The current configuration method of the network
+Value is either 'dhcp' or 'manual'
+
+network.mode : number
+The network capability mode
+0 → Pending
+
+1 → Auto
+
+2 → 1000baseTx-FD
+
+3 → 100baseTx-FD
+
+4 → 100baseTx-HD
+
+network.nameservers : string
+Comma separated list of detected name servers
+network.scan : boolean
+Enable scanning of network in order to discover other projectors
+network.services : string[]
+List of projectors discovered on the network
+IP Address : Model Name : Serial number
+
+network.setmode (number) → true - if call was successful
+Request network capability mode
+Speed [1, 4]
+
+network.speed : number
+The detected network speed in Mb/s
+network.sshenabled : boolean
+Whether or not SSH access to the projector is enabled
+network.state : string
+The state of the network interface
+network.status : number
+Status of the network capability nmode
+0 -> OK
+
+1 -> Initializing
+
+2 -> Pending
+
+3 -> Enable flow control or select lower speed
+
+optic.focus.enable : boolean
+Enable/disable focus control
+optic.focus.far (number) → true - if call was successful
+Run focus a given number of steps for far focus
+Steps
+
+optic.focus.near (number) → true - if call was successful
+Run focus a given number of steps for near focus
+Steps
+
+optic.focus.onestep (number) → true - if call was successful
+Run focus motors one step in the given direction
+0 = far, 1 = near
+
+optic.focus.run (number) → true - if call was successful
+Run focus motors in a given direction. Runs until stop command is given, or endstop is reached
+0 = far, 1 = near
+
+optic.focus.stop () → true - if call was successful
+Stop motor
+optic.iris.calibrate () → true - if call was successful
+Calibrate iris motors
+optic.iris.enable : boolean
+Enable/disable iris control
+optic.iris.illum.calibrate () → true - if call was successful
+Calibrate illum-iris motor
+optic.iris.illum.enable : boolean
+Enable/disable iris control
+optic.iris.illum.legacyposition : number
+Legacy position of illum-iris
+optic.iris.illum.onestep (number) → true - if call was successful
+Step the illum-iris one step
+0 = Open, 1 = Close
+
+optic.iris.illum.position : number
+Current position of illum-iris
+optic.iris.illum.range : number
+Range of illum iris position
+optic.iris.illum.run (number) → true - if call was successful
+Run the irises in a given direction. Runs until stop command is given
+0 = Open, 1 = Close
+
+optic.iris.illum.setlegacyposition (number) → true - if call was successful
+Step illum-iris to target legacy position
+0 = fully closed
+
+optic.iris.illum.setposition (number) → true - if call was successful
+Step illum-iris to target position
+0 = fully open
+
+optic.iris.illum.step (number, number) → true - if call was successful
+Run the illum-iris in a given direction. Runs the number of steps provided
+0 = Open, 1 = Close
+
+Number of steps to run
+
+optic.iris.illum.stepdown (number) → true - if call was successful
+Step illum-iris down a number of steps
+Steps
+
+optic.iris.illum.stepup (number) → true - if call was successful
+Step illum-iris up a number of steps
+Steps
+
+optic.iris.illum.stop () → true - if call was successful
+Stop running of the illum-iris
+optic.iris.legacyposition : number
+Legacy position of iris system
+optic.iris.linked : boolean
+Link the illum and lens iris together. Default is on
+optic.iris.onestep (number) → true - if call was successful
+Step the iris one step
+0 = Open, 1 = Close
+
+optic.iris.position : number
+Current position of iris system
+optic.iris.range : number
+Max possible iris position
+optic.iris.run (number) → true - if call was successful
+Run the irises in a given direction. Runs until stop command is given
+0 = Open, 1 = Close
+
+optic.iris.setlegacyposition (number) → true - if call was successful
+Step iris to target legacy position. (0 = closed
+0 = closed
+
+optic.iris.setposition (number) → true - if call was successful
+Step iris to target position
+0 = fully open
+
+optic.iris.step (number, number) → true - if call was successful
+Run the irises in a given direction. Runs the number of steps provided
+0 = Open, 1 = Close
+
+Number of steps to run
+
+optic.iris.stepdown (number) → true - if call was successful
+Step iris down a number of steps
+Steps
+
+optic.iris.stepup (number) → true - if call was successful
+Step iris up a number of steps
+Steps
+
+optic.iris.stop () → true - if call was successful
+Stop running of the iris
+optic.lens.list : string[]
+List lens types
+optic.lens.settype (number) → true - if call was successful
+Set Lenstype. Discarded if autodetect is enabled
+optic.lens.type : number
+Current active lens type
+optic.lensshift.busy : boolean
+Busy signal for shift motors. Don't send new command while this flag is true
+optic.lensshift.center () → true - if call was successful
+Center lens shift
+Steps
+
+optic.lensshift.down (number) → true - if call was successful
+Shift lens down a given number of steps
+Steps
+
+optic.lensshift.enable : boolean
+Enable/disable lens shift
+optic.lensshift.left (number) → true - if call was successful
+Shift lens left a given number of steps
+Steps
+
+optic.lensshift.onestep (number) → true - if call was successful
+Shift one step in the given direction
+0 = Up, 1 = Down, 2 = Right, 3 = Left
+
+optic.lensshift.right (number) → true - if call was successful
+Shift lens right a given number of steps
+Steps
+
+optic.lensshift.run (number) → true - if call was successful
+Run lens shift motors in a given direction. Shifts until stop command is given, or endstop is reached
+0 = Up, 1 = Down, 2 = Right, 3 = Left
+
+optic.lensshift.step (number, number) → true - if call was successful
+Shift lens a fixed amount of steps in the given direction
+0 = Up, 1 = Down, 2 = Right, 3 = Left
+
+Number of steps to run
+
+optic.lensshift.stop () → true - if call was successful
+Stop motor
+optic.lensshift.up (number) → true - if call was successful
+Shift lens up a givem number of steps
+Steps
+
+optic.zoom.enable : boolean
+Enable/disable zoom control
+optic.zoom.onestep (number) → true - if call was successful
+Run zoom motors one step in the given direction
+0 = wide, 1 = tele
+
+optic.zoom.run (number) → true - if call was successful
+Run zoom motors in a given direction. Runs until stop command is given, or endstop is reached
+0 = wide, 1 = tele
+
+optic.zoom.stop () → true - if call was successful
+Stop motor
+optic.zoom.tele (number) → true - if call was successful
+Run zoom a given number of steps for tele zoom
+Steps
+
+optic.zoom.wide (number) → true - if call was successful
+Run zoom a given number of steps for wide zoom
+Steps
+
+os.testpatternstorage : number
+Amount of storage used for test patterns (bytes)
+os.userdisksize : number
+Size of disk storage for user files (bytes)
+os.userspaceavailable : number
+Remaining amount of storage available for user files (bytes)
+os.warpstorage : number
+Amount of storage used for warp files (bytes)
+pixelshift.active : boolean
+Indicates if pixel shift is active
+pixelshift.enable : boolean
+Enable/disable pixelshift. Unit needs to have pixel shift installed
+pixelshift.installed : boolean
+Is pixel shift installed in unit?
+pixelshift.internal : boolean
+The mode when using pixel shift. Legal values are:
+0 → external
+
+1 → internal
+
+pixelshift.invert : boolean
+Invert input order
+pixelshift.invert_y : boolean
+Invert input order y
+pixelshift.invert_y4pos : boolean
+Invert input order y
+pixelshift.invert4pos : boolean
+Invert input order
+pixelshift.is4wayshift : boolean
+Is the current use-case 4 way shift
+remotecontrol.click (number) → true - if call was successful
+Send a remote control click event
+remotecontrol.irfront : boolean
+Enable/disable front IR remotecontrol receiver
+remotecontrol.irrear : boolean
+Enable/disable rear IR remotecontrol receiver
+remotecontrol.postevent (number, number) → true - if call was successful
+Post a remote control key event
+serviceregistered : string
+serviceunregistered : string
+state.coolingtimer : number
+Seconds counting down to end of cooling period
+Seconds in the range [0,120]
+
+state.off () → true - if call was successful
+Power off the projector and return to default state
+state.on () → true - if call was successful
+Power on the projector
+state.reboot () → true - if call was successful
+Reboot the projector and return to default state
+state.restore (string) → boolean
+Restore setting to user level from /pwr/srv/fac/dev
+state.state : number
+The current operating state of the projector
+0 → Standby
+
+1 → Warming
+
+2 → On
+
+3 → Cooling
+
+4 → Boot
+
+5 → Eco
+
+6 → Low power
+
+7 → Upgrade
+
+8 → Error
+
+state.toggle () → true - if call was successful
+If off, power on. If on, power off
+statistics.actuator.count : number
+Counter value
+statistics.actuator.counttype : number
+Type of counter
+0 → count
+
+1 → time in seconds
+
+statistics.actuator.description : string
+Description of counter
+statistics.actuator.name : string
+Name of counter
+statistics.actuator.serviceinterval : number
+Service interval
+0 → no service interval
+
+1 → service interval in seconds
+
+statistics.actuator.servicewarning : number
+Service warning when closing lifetime
+0 → no service warning
+
+1 → service warning in seconds
+
+statistics.boot.count : number
+Counter value
+statistics.boot.counttype : number
+Type of counter
+0 → count
+
+1 → time in seconds
+
+statistics.boot.description : string
+Description of counter
+statistics.boot.name : string
+Name of counter
+statistics.boot.serviceinterval : number
+Service interval
+0 → no service interval
+
+1 → service interval in seconds
+
+statistics.boot.servicewarning : number
+Service warning when closing lifetime
+0 → no service warning
+
+1 → service warning in seconds
+
+statistics.fandmd.count : number
+Counter value
+statistics.fandmd.counttype : number
+Type of counter
+0 → count
+
+1 → time in seconds
+
+statistics.fandmd.description : string
+Description of counter
+statistics.fandmd.name : string
+Name of counter
+statistics.fandmd.serviceinterval : number
+Service interval
+0 → no service interval
+
+1 → service interval in seconds
+
+statistics.fandmd.servicewarning : number
+Service warning when closing lifetime
+0 → no service warning
+
+1 → service warning in seconds
+
+statistics.fanfpga.count : number
+Counter value
+statistics.fanfpga.counttype : number
+Type of counter
+0 → count
+
+1 → time in seconds
+
+statistics.fanfpga.description : string
+Description of counter
+statistics.fanfpga.name : string
+Name of counter
+statistics.fanfpga.serviceinterval : number
+Service interval
+0 → no service interval
+
+1 → service interval in seconds
+
+statistics.fanfpga.servicewarning : number
+Service warning when closing lifetime
+0 → no service warning
+
+1 → service warning in seconds
+
+statistics.fanrear.count : number
+Counter value
+statistics.fanrear.counttype : number
+Type of counter
+0 → count
+
+1 → time in seconds
+
+statistics.fanrear.description : string
+Description of counter
+statistics.fanrear.name : string
+Name of counter
+statistics.fanrear.serviceinterval : number
+Service interval
+0 → no service interval
+
+1 → service interval in seconds
+
+statistics.fanrear.servicewarning : number
+Service warning when closing lifetime
+0 → no service warning
+
+1 → service warning in seconds
+
+statistics.totalontime.count : number
+Counter value
+statistics.totalontime.counttype : number
+Type of counter
+0 → count
+
+1 → time in seconds
+
+statistics.totalontime.description : string
+Description of counter
+statistics.totalontime.name : string
+Name of counter
+statistics.totalontime.serviceinterval : number
+Service interval
+0 → no service interval
+
+1 → service interval in seconds
+
+statistics.totalontime.servicewarning : number
+Service warning when closing lifetime
+0 → no service warning
+
+1 → service warning in seconds
+
+statistics.totalruntime.count : number
+Counter value
+statistics.totalruntime.counttype : number
+Type of counter
+0 → count
+
+1 → time in seconds
+
+statistics.totalruntime.description : string
+Description of counter
+statistics.totalruntime.name : string
+Name of counter
+statistics.totalruntime.serviceinterval : number
+Service interval
+0 → no service interval
+
+1 → service interval in seconds
+
+statistics.totalruntime.servicewarning : number
+Service warning when closing lifetime
+0 → no service warning
+
+1 → service warning in seconds
+
+statistics.unsafeshutdown.count : number
+Counter value
+statistics.unsafeshutdown.counttype : number
+Type of counter
+0 → count
+
+1 → time in seconds
+
+statistics.unsafeshutdown.description : string
+Description of counter
+statistics.unsafeshutdown.name : string
+Name of counter
+statistics.unsafeshutdown.serviceinterval : number
+Service interval
+0 → no service interval
+
+1 → service interval in seconds
+
+statistics.unsafeshutdown.servicewarning : number
+Service warning when closing lifetime
+0 → no service warning
+
+1 → service warning in seconds
+
+statistics.uptime.count : number
+Counter value
+statistics.uptime.counttype : number
+Type of counter
+0 → count
+
+1 → time in seconds
+
+statistics.uptime.description : string
+Description of counter
+statistics.uptime.name : string
+Name of counter
+statistics.uptime.serviceinterval : number
+Service interval
+0 → no service interval
+
+1 → service interval in seconds
+
+statistics.uptime.servicewarning : number
+Service warning when closing lifetime
+0 → no service warning
+
+1 → service warning in seconds
+
+testpattern.contentchange : string
+testpattern.del (string) → boolean
+testpattern.delall () → boolean
+testpattern.draw (a, {, string, any, }) → boolean
+testpattern.enable : boolean
+Enable/disable selected test pattern
+testpattern.gettpgfile (string) → string
+testpattern.internal : string[]
+List of internal test patterns
+testpattern.log.message : string[]
+user messages
+testpattern.paintstatus : boolean
+Boolean - true if testpattern is valid
+testpattern.scale : number
+Select scaling algorithm
+0 → 1:1 - centered
+
+1 → aspect
+
+2 → fill
+
+testpattern.select : string
+Select test pattern
+testpattern.uploaded : string[]
+List of uploaded test pattern images(png/jpg)
+testpattern.uploadedtpg : string[]
+List of uploaded test patterns scripts(tpg)
+thermal.configuration : string
+Product type the thermal-service is configured as
+thermal.fan.dmd.maxrpm : number
+Read max RPM of fan
+thermal.fan.dmd.name : string
+Name of the fan
+thermal.fan.dmd.rpm : number
+Read RPM of fan
+thermal.fan.fpga.maxrpm : number
+Read max RPM of fan
+thermal.fan.fpga.name : string
+Name of the fan
+thermal.fan.fpga.rpm : number
+Read RPM of fan
+thermal.fan.group.info : string
+Information about the selected fan group
+thermal.fan.group.list : string[]
+List of available fan groups
+thermal.fan.group.select : number
+Select which group of fan is used. This setting is kept on reboot
+thermal.fan.rear1.maxrpm : number
+Read max RPM of fan
+thermal.fan.rear1.name : string
+Name of the fan
+thermal.fan.rear1.rpm : number
+Read RPM of fan
+thermal.fan.rear2.maxrpm : number
+Read max RPM of fan
+thermal.fan.rear2.name : string
+Name of the fan
+thermal.fan.rear2.rpm : number
+Read RPM of fan
+thermal.fan.rear3.maxrpm : number
+Read max RPM of fan
+thermal.fan.rear3.name : string
+Name of the fan
+thermal.fan.rear3.rpm : number
+Read RPM of fan
+thermal.pid.main.setpoint : number
+thermal.shutdown.fpga.blue1alarm : boolean
+Indicate if blue1 alarm has been triggered
+thermal.shutdown.fpga.blue2alarm : boolean
+Indicate if blue2 alarm has been triggered
+thermal.shutdown.fpga.dmdalarm : boolean
+Indicate if DMD alarm has been triggered
+thermal.shutdown.fpga.green1alarm : boolean
+Indicate if green1 alarm has been triggered
+thermal.shutdown.fpga.green2alarm : boolean
+Indicate if green2 alarm has been triggered
+thermal.shutdown.fpga.red1alarm : boolean
+Indicate if red1 alarm has been triggered
+thermal.shutdown.fpga.red2alarm : boolean
+Indicate if red2 alarm has been triggered
+thermal.shutdown.fpga.reset () → true - if call was successful
+Reset thermal shutdown from FPGA
+thermal.temperature.cpu.alarm : boolean
+Critical temperature has been reached reached
+thermal.temperature.cpu.criticaltemp : number
+Get critical temperature in celsius
+thermal.temperature.cpu.critshutdown : boolean
+Critical shutdown signal
+thermal.temperature.cpu.name : string
+thermal.temperature.cpu.resetwarning () → true - if call was successful
+Reset warning flag
+thermal.temperature.cpu.temp : number
+Read temperature with the selected metric. Updates at interval of 5s.
+thermal.temperature.cpu.warning : boolean
+Warning temperature has been reached reached
+thermal.temperature.cpu.warningsignal : boolean
+Signal indicating that temperature has reached above warning level
+thermal.temperature.cpu.warningtemp : number
+Get warning temperature in celsius
+thermal.temperature.green2.alarm : boolean
+Critical temperature has been reached reached
+thermal.temperature.green2.criticaltemp : number
+Get critical temperature in celsius
+thermal.temperature.green2.critshutdown : boolean
+Critical shutdown signal
+thermal.temperature.green2.name : string
+thermal.temperature.green2.resetwarning () → true - if call was successful
+Reset warning flag
+thermal.temperature.green2.temp : number
+Read temperature with the selected metric. Updates at interval of 5s.
+thermal.temperature.green2.warning : boolean
+Warning temperature has been reached reached
+thermal.temperature.green2.warningsignal : boolean
+Signal indicating that temperature has reached above warning level
+thermal.temperature.green2.warningtemp : number
+Get warning temperature in celsius
+thermal.temperature.vpfpga.alarm : boolean
+Critical temperature has been reached reached
+thermal.temperature.vpfpga.criticaltemp : number
+Get critical temperature in celsius
+thermal.temperature.vpfpga.critshutdown : boolean
+Critical shutdown signal
+thermal.temperature.vpfpga.name : string
+thermal.temperature.vpfpga.resetwarning () → true - if call was successful
+Reset warning flag
+thermal.temperature.vpfpga.temp : number
+Read temperature with the selected metric. Updates at interval of 5s.
+thermal.temperature.vpfpga.warning : boolean
+Warning temperature has been reached reached
+thermal.temperature.vpfpga.warningsignal : boolean
+Signal indicating that temperature has reached above warning level
+thermal.temperature.vpfpga.warningtemp : number
+Get warning temperature in celsius
+thermal.temperatureisstable : boolean
+Flag to indicate when the operating temperature reaches stable levels
+ui.language : number
+Specifies the user interface language on the OSD
+1 → English
+
+4 → Norwegian
+
+5 → Korean
+
+6 → Japanese
+
+7 → Chinese
+
+ui.menu : number
+Show or hide the menu
+0 → Hide menu
+
+1 → Show menu
+
+ui.menutimeout : number
+Specifies the menu timeout. The menu will automatically hide itself when idle for the specified amount of time.
+0 → Menu never times out
+
+1 → Menu times out after 30 seconds
+
+2 → Menu times out after 5 minutes
+
+ui.palette : number
+User interface theme palette for the OSD
+0 → Azure
+
+1 → Orange
+
+2 → Violet
+
+3 → Magenta
+
+4 → Olive
+
+ui.reset () → true - if call was successful
+Reset the user interface settings to factory default values
+ui.screen.rotation : number
+Rotate the menu 90 degrees clockwise or counter clockwise.
+0 → No rotation
+
+1 → Clockwise
+
+2 → Counter clockwise
+
+ui.stealth : boolean
+Toggle the stealth mode. When enabled, turns off all LEDs on the projector
+false → Stealth mode is off
+
+true → Stealth mode is on
+
+ui.temperature : number
+Unit for temperatures
+0 → Celsius
+
+1 → Fahrenheit
+
+ui.theme : number
+User interface theme for the OSD
+0 → Dark theme
+
+1 → Light theme
+
+ui.togglemenu () → true - if call was successful
+Toggle the menu on/off
+update :
+uploads () → a(sssus)
+List file endpoints for uploads
+upnp.enable : boolean
+Enable or disable the upnp service
+version.version : string
+The projector firmware version
